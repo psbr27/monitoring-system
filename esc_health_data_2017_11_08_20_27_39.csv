@@ -1,0 +1,3 @@
+escID,bandIndex,timeStampHealthCheck,noiseRssiDbm,rmsAverage,dcI,gpioSPIvalue,gpioOverLoad,numDmaOverflows,iqImbalanceGaindB,iqImbalancePhaseDeg,agcGain,agcMaxVal,dcQ,adiTxAttenutation,adiTxClockHz,adiRxClockHz,adiTxLoHz,adiGainValue,adiRxLoHz,memoryFreeKb,cpuClockSpeed,upTime,oneMinLoad,memoryTotalKb,compassChange,compass_y_axis,humidity,compass_x_axis,temperature,compass_z_axis
+1,445246.749706,-86.825134,20.880613,-2,0,0,0,0,0,59,134,-4,88000,49151999,49151999,3571503998,59,3621504000,712816,0,445526,1,763048,0,2587,5.371094,-3223,107.267334,4128
+1,445246.749706,-86.825134,20.880613,-2,0,0,0,0,0,59,134,-4,88000,49151999,49151999,3571503998,59,3621504000,712816,0,445526,1,763048,0,2587,5.371094,-3223,107.267334,4128
