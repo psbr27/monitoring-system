@@ -106,6 +106,22 @@ def csv_client_hdlr(connection,e,t):
 
 """ Function: Thread_1 handle rest server requests """
 
+def put_data_into_queue(username,data):
+	if username == 'fed_esc_01':
+		escQ.esc_sn01_Q.put(data)
+	if username == 'fed_esc_015':
+		escQ.esc_sn015_Q.put(data)
+	if username == 'fed_esc_023':
+		escQ.esc_sn023_Q.put(data)
+	if username == 'fed_esc_026':
+		escQ.esc_sn026_Q.put(data)
+	if username == 'fed_esc_029':
+		escQ.esc_sn029_Q.put(data)
+	if username == 'fed_esc_08':
+		escQ.esc_sn08_Q.put(data)
+	if username == 'fed_esc_014':
+		escQ.esc_sn014_Q.put(data)
+
 
 def handle_response(data):
     global create_flag
@@ -129,8 +145,7 @@ def handle_response(data):
 	    entry = bandId
 	    escId = json_parse['sensorId'] 
             #retrieve sensor Id fed_esc_029 to esc_sn029
-            newEscId = escId[4:7] + "sn" + escId[8:10] +"_Q"
-            escQ.newEscId.put(json_parse)
+     	    put_data_into_queue(escId,json_parse)
 
 
 	    print("----------------------- rest_server_hdlr ---------------------\n")

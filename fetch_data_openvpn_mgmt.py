@@ -32,6 +32,7 @@ from pprint import pformat
 from semantic_version import Version as semver
 import mysql.connector
 import esc_main as escMain
+import esc_queue as escQ
 from mysql.connector import MySQLConnection, Error
 
 import boto3
@@ -171,12 +172,15 @@ def update_database(sessions, HbeatCount):
 	cursor.close()
 
 
+
 #__________________________________________________________________________________________________
-def prepare_insert_query(sessions):
+def prepare_insert_query(sessions, flag):
 	conn = connect()
 	cursor = conn.cursor()
 	for item in sessions:
 		session = sessions[item]
+		if flag:
+			escQ.esc_thread_handler(session['username'])
 		sql = "INSERT INTO esc_tbl VALUES('%s', '%d', '%d', '%s', '%s', '%s', '%s', '%d')" % \
 						(session['username'], int(session['bytes_sent']), int(session['bytes_recv']), session['local_ip'], session['remote_ip'],session['connected_since'], "UP", 1)
 		no_of_rows = cursor.execute(sql)
@@ -342,7 +346,7 @@ class OpenvpnMgmtInterface(object):
         len_dict = (len(index_dict_buck2))
 #if count is ZERO; then insert query into esc_tbl
         if count is -1:
-		prepare_insert_query(vpn['sessions'])
+		prepare_insert_query(vpn['sessions'], True)
 
         if count == len_dict:
             print("\t\t\t DB is in sync with App")
@@ -351,7 +355,9 @@ class OpenvpnMgmtInterface(object):
         elif count < len_dict:
             print("\t\t\t new connections in App.. please sync with Db")
 	    escMain.cleanup_db()
-            prepare_insert_query(vpn['sessions'])
+            prepare_insert_query(vpn['sessions'], False)
+	print("HB thread active are...")
+	print(escQ.thread_list)
 
     def _socket_send(self, command):
         if sys.version_info[0] == 2:
