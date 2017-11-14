@@ -15,6 +15,7 @@ import logging
 
 from pysnmp.entity.rfc3413.oneliner import cmdgen
 from pysnmp.proto import rfc1902
+import esc_queue as escQ
 
 dyanmodb = dynamodblib.DynamoDB()
 healthDB = dynamodblib.sensorHealthDB()
@@ -127,6 +128,11 @@ def handle_response(data):
 
 	    entry = bandId
 	    escId = json_parse['sensorId'] 
+            #retrieve sensor Id fed_esc_029 to esc_sn029
+            newEscId = escId[4:7] + "sn" + escId[8:10] +"_Q"
+            escQ.newEscId.put(json_parse)
+
+
 	    print("----------------------- rest_server_hdlr ---------------------\n")
 	    if ((bandId == 0 or bandId == 1) and index_counter < 6):
 		print("---> Window Stared <---")
