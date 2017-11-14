@@ -45,6 +45,7 @@ iptables = iptablelib.IpTablesLib('100.61.0.1','10.1.1.199')
 iptables.installIpTableNorth('10.1.1.77',8000,25000)
 portmanager = portmanagerlib.PortManager()
 atexit.register(cleanup)
+client  = boto3.client('sns')
 
 interval=15
 
@@ -159,6 +160,8 @@ def update_database(sessions, HbeatCount):
 	cursor = conn.cursor()
 	for item in sessions:
 		session = sessions[item]
+		if session is None:
+			continue
 		#sql = "UPDATE esc_tbl SET TxBytes=%d, RxBytes=%d, LocalIp=%s, RemoteIp=%s, lastConnection=%s, CommStatus=%s, HeartBeatCount=%d, WHERE esc_name=%s" % \
 		#		(int(session['bytes_sent']), int(session['bytes_recv']), session['local_ip'], session['remote_ip'],session['connected_since'], "UP", 1, session['username'])
 		sql = "UPDATE esc_tbl SET TxBytes=%d, RxBytes=%d, lastConnection='%s', HeartBeatCount=%d WHERE esc_name='%s'" %(int(session['bytes_sent']), int(session['bytes_recv']),session['connected_since'],HbeatCount, session['username'])
@@ -190,6 +193,16 @@ def update_comm(commStatus, HbeatCount, escId):
     conn.commit()
     conn.close()
     cursor.close()
+
+def update_deploy_status(status, escID):
+    conn = connect()
+    cursor = conn.cursor()
+    sql = "UPDATE ESC_DEPLOY_INFO SET deployStatus=%d WHERE esc_name='%s'" %(status, escID)
+    cursor.execute(sql)
+    conn.commit()
+    conn.close()
+    cursor.close()
+
 
 #__________________________________________________________________________________________________
 #fetch number of rows
@@ -227,6 +240,28 @@ def query_with_fetchnone(pingFlag):
     return count
 
 
+def get_siteid_lableno(username):
+	deploy_list=[]
+	try:
+		conn = connect()
+		cursor = conn.cursor()
+		print(username)
+		sql = "SELECT * FROM ESC_DEPLOY_INFO WHERE escName LIKE '%s'" %(username)
+		cursor.execute(sql)
+
+		row = cursor.fetchone()
+		print(row)
+		while row is not None:
+			deploy_list.append(list(row)[2])
+			deploy_list.append(list(row)[4])
+			break
+		cursor.close()
+		conn.close()
+	except Error as e:
+		print(e)
+
+	print(deploy_list)
+	return deploy_list
 #__________________________________________________________________________________________________
 
 def output(s):
@@ -535,9 +570,11 @@ class OpenvpnMgmtInterface(object):
 #get the siteID and esc Label number (TODO)
                     if (status == 0):
                         print("\n NOTIFY: ---> send email/sms notification <---- \n")
-                        notify_email(session['username'], "XX", "XX")
-                        notify_sms(session['username'], "XX", "XX")
-                        update_deploy_status(session['username'])
+			dlist = get_siteid_lableno(session['username'])
+                        notify_email(session['username'], dlist[0], str(dlist[1]))
+                        notify_sms(session['username'], dlist[0], str(dlist[1]))
+			update_comm("UP", 0, session['username'])
+			update_deploy_status(1, session['username'])
                     else:
                         print("<------ No notification ----->\n")
                 index_dict_buck2[common_name] = num
