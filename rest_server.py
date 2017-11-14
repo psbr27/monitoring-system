@@ -7,6 +7,7 @@ import socket
 import sys
 import time
 
+import snmp_stat as snmpStat
 
 app = Flask(__name__)
 
@@ -20,12 +21,13 @@ def index():
 def api_upload():
     global sock_c
     response = request.data
-    if 'sensorId' in response:
-        return "200"
+    if 'sensorMeasurement' in response:
+    	return "200"
     print(response)
     print("--------------> \n")
     #data = json.dumps(response).encode('utf-8') 
-    sock_c.sendall(response)
+    #sock_c.sendall(response)
+    snmpStat.handle_response(response)
     return "200"
 
 def create_socket():

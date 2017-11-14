@@ -12,7 +12,7 @@ import rest_server as restSrv
 
 import mysql.connector
 from mysql.connector import MySQLConnection, Error
-interval=30
+interval=15
 
 
 def process_data():

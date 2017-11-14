@@ -315,6 +315,8 @@ class OpenvpnMgmtInterface(object):
             print("\t\t\t Looks like connections are lost in App.. please sync with Db")
         elif count < len_dict:
             print("\t\t\t new connections in App.. please sync with Db")
+	    escMain.cleanup_db()
+            prepare_insert_query(vpn['sessions'])
 
     def _socket_send(self, command):
         if sys.version_info[0] == 2:
@@ -525,6 +527,7 @@ class OpenvpnMgmtInterface(object):
                     update_database(sessions, num)
                 else:
 #query the SQL DB to fetch the port assigned
+                    print(session['username'])
                     ssh_port = verify_if_port_exists(session['username'])
                     iptables.installIpTableSouth(str(session['local_ip']),22,ssh_port)
 #query the deploy status of the ESC (TODO) 
