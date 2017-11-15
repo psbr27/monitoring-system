@@ -25,11 +25,11 @@ def connect():
     except Error as e:
         print(e)
 
-def insert_query_to_hbeat_tbl(sessions, flag):
+def insert_query_to_hbeat_tbl(esc_name, heart_beat, hb_count, opState, adminState):
 	conn = connect()
 	cursor = conn.cursor()
-	sql = "INSERT INTO esc_hbeat_tbl VALUES('%s', '%s', '%d', '%s', '%s', '%s')" % \
-					(session['username'], int(session['bytes_sent']), int(session['bytes_recv']), session['local_ip'], session['remote_ip'],session['connected_since'], "UP", 1)
+	sql = "INSERT INTO esc_hbeat_tbl VALUES('%s', '%s', '%d', '%s', '%s', 'NOW()')" % \
+					(esc_name, heart_beat, hb_count, opState, adminState)
 	no_of_rows = cursor.execute(sql)
 	conn.commit()
 	conn.close()
@@ -71,18 +71,21 @@ def esc_thread_handler(username):
 def esc_sn014_Q_thread(username):
 	thread_list.append(username)
 	counter=0
+	count = 0
 	while True:
+		count = count + 1
 		try:
 			hb = esc_sn014_Q.get(True, 20)
 			if hb:
 			    esc_sn014_Q.task_done()
+				insert_query_to_hbeat_tbl(username,"UP",count,"ACTIVE","ENABLE")
 		except:
 			print("14:timeout")
 			counter = counter + 1
 			if counter==3:
 				counter=0
 				print("\t\t\t\t\tNo heart beat detcted for esc_sn014, raise a trap")
-				thread_list.pop(username)
+				thread_list.remove(username)
 				break
 			elif counter < 3:
 				continue	
@@ -102,7 +105,7 @@ def esc_sn01_Q_thread(username):
 			if counter==3:
 				counter=0
 				print("\t\t\t\t\tNo heart beat detcted for esc_sn01, raise a trap")
-				thread_list.pop(username)
+				thread_list.remove(username)
 				break
 			elif counter < 3:
 				continue	
@@ -121,7 +124,7 @@ def esc_sn015_Q_thread(username):
 			if counter==3:
 				counter=0
 				print("\t\t\t\t\tNo heart beat detcted for esc_sn015, raise a trap")
-				thread_list.pop(username)
+				thread_list.remove(username)
 				break
 			elif counter < 3:
 				continue	
@@ -140,7 +143,7 @@ def esc_sn023_Q_thread(username):
 			if counter==3:
 				counter=0
 				print("\t\t\t\t\tNo heart beat detcted for esc_sn023, raise a trap")
-				thread_list.pop(username)
+				thread_list.remove(username)
 				break
 			elif counter < 3:
 				continue	
@@ -159,7 +162,7 @@ def esc_sn026_Q_thread(username):
 			if counter==3:
 				counter=0
 				print("\t\t\t\t\tNo heart beat detcted for esc_sn026, raise a trap")
-				thread_list.pop(username)
+				thread_list.remove(username)
 				break
 			elif counter < 3:
 				continue	
@@ -178,7 +181,7 @@ def esc_sn029_Q_thread(username):
 			if counter==3:
 				counter=0
 				print("\t\t\t\t\tNo heart beat detcted for esc_sn029, raise a trap")
-				thread_list.pop(username)
+				thread_list.remove(username)
 				break
 			elif counter < 3:
 				continue	
@@ -198,7 +201,7 @@ def esc_sn08_Q_thread(username):
 			if counter==3:
 				counter=0
 				print("\t\t\t\t\tNo heart beat detcted for esc_sn08, raise a trap")
-				thread_list.pop(username)
+				thread_list.remove(username)
 				break
 			elif counter < 3:
 				continue	
