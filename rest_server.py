@@ -23,9 +23,7 @@ def api_upload():
     response = request.data
     if 'sensorMeasurement' in response:
     	return "200"
-    print(response)
-    print("--------------> \n")
-    #data = json.dumps(response).encode('utf-8') 
+    #data = json.dumps(response).encode('utf-8')
     #sock_c.sendall(response)
     snmpStat.handle_response(response)
     return "200"

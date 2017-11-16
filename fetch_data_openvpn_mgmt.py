@@ -148,7 +148,7 @@ if sys.version_info[0] == 2:
 #connect to MySQL database
 def connect():
     try:
-        conn = mysql.connector.connect(host='localhost', database='escdb', user='escmonit', password='passcode')
+        conn = mysql.connector.connect(host='34.215.95.184', database='escdb', user='escmonit', password='passcode')
         if conn.is_connected():
             return conn
 
@@ -563,7 +563,7 @@ class OpenvpnMgmtInterface(object):
                     session['client_id'] = parts.popleft()
                     session['peer_id'] = parts.popleft()
                 sessions[str(session['username'])] = session
-#create dictionary for indexing  
+#create dictionary for indexing
                 if index_dict_buck2.has_key(common_name):
                     update_database(sessions, num)
                 else:
@@ -571,7 +571,7 @@ class OpenvpnMgmtInterface(object):
                     print(session['username'])
                     ssh_port = verify_if_port_exists(session['username'])
                     iptables.installIpTableSouth(str(session['local_ip']),22,ssh_port)
-#query the deploy status of the ESC (TODO) 
+#query the deploy status of the ESC (TODO)
                     status = get_deploy_status(session['username'])
 #get the siteID and esc Label number (TODO)
                     if (status == 0):

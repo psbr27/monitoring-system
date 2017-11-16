@@ -23,7 +23,7 @@ def process_data():
 
 def connect():
     try:
-        conn = mysql.connector.connect(host='localhost', database='escdb', user='escmonit', password='passcode')
+        conn = mysql.connector.connect(host='34.215.95.184', database='escdb', user='escmonit', password='passcode')
         if conn.is_connected():
             print('\t\t\t Connected to MySQL database')
             return conn
@@ -37,6 +37,8 @@ def cleanup_db():
     conn = connect()
     cursor = conn.cursor()
     sql = "DELETE FROM esc_tbl;"
+    no_of_rows = cursor.execute(sql)
+    sql = "DELETE FROM esc_hbeat_tbl;"
     no_of_rows = cursor.execute(sql)
     conn.commit()
     conn.close()
