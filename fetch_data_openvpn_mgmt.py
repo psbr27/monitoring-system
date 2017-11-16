@@ -15,258 +15,48 @@ try:
 except ImportError:
     from ipaddress import ip_address, IPv6Address
 
-import subprocess
 import socket
 import re
-import argparse
 import GeoIP
 import sys
-import time, os
 import atexit
-import iptablelib
 import portmanagerlib
 from datetime import datetime
-from humanize import naturalsize
-from collections import OrderedDict, deque
-from pprint import pformat
+from collections import deque
 from semantic_version import Version as semver
-import mysql.connector
-import esc_main as escMain
-import esc_queue as escQ
-from mysql.connector import MySQLConnection, Error
 
-import boto3
+import esc_main as esc_m
+import esc_queue as esc_q
+import mysql_queries as mysql
+import sns as sns
+import logmanager
+
+log_m = logmanager.LogManager()
+log = log_m.logger()
+
 global workQueue
 
-def cleanup():
-	global iptablelib
-	iptables.deleteIpTable()
 
-iptables = iptablelib.IpTablesLib('100.61.0.1','10.1.1.199')
-iptables.installIpTableNorth('10.1.1.77',8000,25000)
+def cleanup():
+    global iptablelib
+    iptables.deleteIpTable()
+
+
+iptables = iptablelib.IpTablesLib('100.61.0.1', '10.1.1.199')
+iptables.installIpTableNorth('10.1.1.77', 8000, 25000)
 portmanager = portmanagerlib.PortManager()
 atexit.register(cleanup)
-client  = boto3.client('sns')
 
-interval=15
+interval = 15
 
+index_dict_buck1 = {}
+index_dict_buck2 = {}
 
-index_dict_buck1={}
-index_dict_buck2={}
-
-
-#__________________________________________________________________________________________________
-def get_deploy_status(escID):
-	conn = connect()
-	cursor = conn.cursor()
-	query = "SELECT * from ESC_DEPLOY_INFO WHERE escName='%s'" %(escID)
-	cursor.execute(query)
-        row = cursor.fetchone()
-#[8, u'esc_sn015', u'FL005', 1, 72900015, 10000]
-	deployStatus = (list(row)[3])
-#decode the row and assign ssh port
-	conn.close()
-	cursor.close()
-	return deployStatus
-
-#__________________________________________________________________________________________________
-def verify_if_port_exists(escID):
-#fetch the row from ESC_DEPLOY_INFO table;
-	conn = connect()
-	cursor = conn.cursor()
-	query = "SELECT * from ESC_DEPLOY_INFO WHERE escName='%s'" %(escID)
-	cursor.execute(query)
-        row = cursor.fetchone()
-#decode the row and assign ssh port
-#[8, u'esc_sn015', u'FL005', 1, 72900015, 10000]
-	sshPort = (list(row)[5])
-	if sshPort == 0:
-#assign SSH port number
-                sshPort = portmanager.getNextAvailablePort()
-	else:
-                sshPort = portmanager.getNextAvailablePort()
-	#	query = "SELECT * from ESC_DEPLOY_INFO WHERE sshPort=%d" %(sshPort)
-	#	cursor.execute(query)
-#		row = cursor.fetchone()
-#		while row is not None:
-#			print(row)
-#			row = cursor.fetchone()
-#		count = cursor.rowcount
-#		print("---- ssh --- \n")
-#		print(count)
-
-
-#update the table with new port number
-	sql = "UPDATE ESC_DEPLOY_INFO SET sshPort=%d WHERE escName='%s'" %(sshPort, escID)
-	cursor.execute(sql)
-	conn.commit()
-
-	conn.close()
-	cursor.close()
-	return sshPort
-#__________________________________________________________________________________________________
-
-def notify_sms(esc_id, siteID, escLabel):
-
-        pySubject = "Alert: ESC Deployed"
-        pyMessage = "ESC deployed successfully at site: " + siteID + "\n" + " ESC Label Number: " +  escLabel + "\n"
-        response = client.list_subscriptions_by_topic(
-                        TopicArn='arn:aws:sns:us-west-2:796687173965:ESC_Deploy_Notification',
-                        NextToken=''
-                        )
-        print(response)
-        response = client.publish(
-                        TopicArn='arn:aws:sns:us-west-2:796687173965:ESC_Deploy_Notification',
-                        Message= pyMessage,
-                        Subject= pySubject,
-                        MessageStructure='Raw'
-                        )
-#
-#__________________________________________________________________________________________________
-
-def notify_email(esc_id, siteID, escLabel):
-
-        pySubject = "Alert: ESC Deployed"
-        pyMessage = "ESC deployed successfully at site: " + siteID + "\n" + " ESC Label Number: " +  escLabel + "\n"
-        response = client.list_subscriptions_by_topic(
-                        TopicArn='arn:aws:sns:us-west-2:796687173965:NotifyDeployment',
-                        NextToken=''
-                        )
-        print(response)
-        response = client.publish(
-                        TopicArn='arn:aws:sns:us-west-2:796687173965:NotifyDeployment',
-                        Message= pyMessage,
-                        Subject= pySubject,
-                        MessageStructure='Raw'
-                        )
-#
-#__________________________________________________________________________________________________
+# __________________________________________________________________________________________________
 if sys.version_info[0] == 2:
     reload(sys)
     sys.setdefaultencoding('utf-8')
 
-#connect to MySQL database
-def connect():
-    try:
-        conn = mysql.connector.connect(host='34.215.95.184', database='escdb', user='escmonit', password='passcode')
-        if conn.is_connected():
-            return conn
-
-    except Error as e:
-        print(e)
-
-#__________________________________________________________________________________________________
-def update_database(sessions, HbeatCount):
-	conn = connect()
-	cursor = conn.cursor()
-	for item in sessions:
-		session = sessions[item]
-		if session is None:
-			continue
-		#sql = "UPDATE esc_tbl SET TxBytes=%d, RxBytes=%d, LocalIp=%s, RemoteIp=%s, lastConnection=%s, CommStatus=%s, HeartBeatCount=%d, WHERE esc_name=%s" % \
-		#		(int(session['bytes_sent']), int(session['bytes_recv']), session['local_ip'], session['remote_ip'],session['connected_since'], "UP", 1, session['username'])
-		sql = "UPDATE esc_tbl SET TxBytes=%d, RxBytes=%d, lastConnection='%s', HeartBeatCount=%d WHERE esc_name='%s'" %(int(session['bytes_sent']), int(session['bytes_recv']),session['connected_since'],HbeatCount, session['username'])
-		cursor.execute(sql)
-		conn.commit()
-	conn.close()
-	cursor.close()
-
-
-
-#__________________________________________________________________________________________________
-def prepare_insert_query(sessions, flag):
-	conn = connect()
-	cursor = conn.cursor()
-	for item in sessions:
-		session = sessions[item]
-		if flag:
-			escQ.esc_thread_handler(session['username'])
-		sql = "INSERT INTO esc_tbl VALUES('%s', '%d', '%d', '%s', '%s', '%s', '%s', '%d')" % \
-						(session['username'], int(session['bytes_sent']), int(session['bytes_recv']), session['local_ip'], session['remote_ip'],session['connected_since'], "UP", 1)
-		no_of_rows = cursor.execute(sql)
-		conn.commit()
-	conn.close()
-	cursor.close()
-
-#__________________________________________________________________________________________________
-def update_comm(commStatus, HbeatCount, escId):
-    conn = connect()
-    cursor = conn.cursor()
-    sql = "UPDATE esc_tbl SET CommStatus='%s', HeartBeatCount=%d WHERE esc_name='%s'" %(commStatus, HbeatCount, escId)
-    cursor.execute(sql)
-    conn.commit()
-    conn.close()
-    cursor.close()
-
-def update_deploy_status(status, escID):
-    conn = connect()
-    cursor = conn.cursor()
-    sql = "UPDATE ESC_DEPLOY_INFO SET deployStatus=%d WHERE esc_name='%s'" %(status, escID)
-    cursor.execute(sql)
-    conn.commit()
-    conn.close()
-    cursor.close()
-
-
-#__________________________________________________________________________________________________
-#fetch number of rows
-def query_with_fetchnone(pingFlag):
-    count=0
-    try:
-        conn = connect()
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM esc_tbl")
-
-        row = cursor.fetchone()
-
-        while row is not None:
-#[u'esc_sn01', 36149, 39122, u'100.61.0.26', u'174.228.132.14', datetime.datetime(2017, 11, 8, 19, 35, 24), u'UP', u'6']
-            address = (list(row)[3])
-            if pingFlag:
-                res = subprocess.call(['ping', '-c', '1', address])
-                if res == 0:
-                    print("Comm is up %s" %(address))
-                else:
-                    print("No response from %s" %(address))
-                    status="DOWN"
-#update db if comm is down
-                    update_comm(status, 1, list(row)[0])
-            row = cursor.fetchone()
-
-        count = cursor.rowcount
-
-        cursor.close()
-        conn.close()
-
-    except Error as e:
-        print(e)
-
-    return count
-
-
-def get_siteid_lableno(username):
-	deploy_list=[]
-	try:
-		conn = connect()
-		cursor = conn.cursor()
-		print(username)
-		sql = "SELECT * FROM ESC_DEPLOY_INFO WHERE escName LIKE '%s'" %(username)
-		cursor.execute(sql)
-
-		row = cursor.fetchone()
-		print(row)
-		while row is not None:
-			deploy_list.append(list(row)[2])
-			deploy_list.append(list(row)[4])
-			break
-		cursor.close()
-		conn.close()
-	except Error as e:
-		print(e)
-
-	print(deploy_list)
-	return deploy_list
-#__________________________________________________________________________________________________
 
 def output(s):
     global wsgi, wsgi_output
@@ -287,6 +77,7 @@ def warning(*objs):
 def debug(*objs):
     print("DEBUG:\n", *objs, file=sys.stderr)
 
+
 def get_date(date_string, uts=False):
     if not uts:
         return datetime.strptime(date_string, "%a %b %d %H:%M:%S %Y")
@@ -300,10 +91,10 @@ def get_str(s):
     else:
         return s
 
-#__________________________________________________________________________________________________
+
+# __________________________________________________________________________________________________
 
 class OpenvpnMgmtInterface(object):
-
     def __init__(self, cfg, **kwargs):
         self.vpns = cfg.vpns
 
@@ -340,24 +131,25 @@ class OpenvpnMgmtInterface(object):
         vpn['stats'] = self.parse_stats(stats)
         status = self.send_command('status 3\n')
         vpn['sessions'] = self.parse_status(status, self.gi, vpn['semver'])
-#Sarath -> Sync with DB
-        print(index_dict_buck2)
-        count = query_with_fetchnone(False)
+        # Sarath -> Sync with DB
+        log.debug(index_dict_buck2)
+        count = mysql.mysql_query_select_esc_tbl()
         len_dict = (len(index_dict_buck2))
-#if count is ZERO; then insert query into esc_tbl
+        # if count is ZERO; then insert query into esc_tbl
         if count is -1:
-		prepare_insert_query(vpn['sessions'], True)
+            mysql.mysql_insert_query(vpn['sessions'], True)
 
         if count == len_dict:
-            print("\t\t\t DB is in sync with App")
+            log.info("DB is in sync with App")
         elif count > len_dict:
-            print("\t\t\t Looks like connections are lost in App.. please sync with Db")
+            log.info("Looks like connections are lost in App.. please sync with Db")
         elif count < len_dict:
-            print("\t\t\t new connections in App.. please sync with Db")
-	    escMain.cleanup_db()
-            prepare_insert_query(vpn['sessions'], False)
-	print("HB thread active are...")
-	print(escQ.thread_list)
+            log.info("new connections in App.. please sync with Db")
+            esc_m.cleanup_db()
+            mysql.mysql_insert_query(vpn['sessions'], False)
+
+        log.debug("HB thread active are...")
+        log.debug(esc_q.thread_list)
 
     def _socket_send(self, command):
         if sys.version_info[0] == 2:
@@ -427,9 +219,7 @@ class OpenvpnMgmtInterface(object):
         state = {}
         for line in data.splitlines():
             parts = line.split(',')
-            if parts[0].startswith('>INFO') or \
-               parts[0].startswith('END') or \
-               parts[0].startswith('>CLIENT'):
+            if parts[0].startswith('>INFO') or parts[0].startswith('END') or parts[0].startswith('>CLIENT'):
                 continue
             else:
                 state['up_since'] = get_date(date_string=parts[0], uts=True)
@@ -455,7 +245,7 @@ class OpenvpnMgmtInterface(object):
         stats['nclients'] = int(re.sub('nclients=', '', parts[0]))
         stats['bytesin'] = int(re.sub('bytesin=', '', parts[1]))
         stats['bytesout'] = int(re.sub('bytesout=', '', parts[2]).replace('\r\n', ''))
-        print(stats)
+        log.debug(stats)
         return stats
 
     @staticmethod
@@ -471,9 +261,7 @@ class OpenvpnMgmtInterface(object):
 
             if parts[0].startswith('END'):
                 break
-            if parts[0].startswith('TITLE') or \
-               parts[0].startswith('GLOBAL') or \
-               parts[0].startswith('TIME'):
+            if parts[0].startswith('TITLE') or parts[0].startswith('GLOBAL') or parts[0].startswith('TIME'):
                 continue
             if parts[0] == 'HEADER':
                 if parts[1] == 'CLIENT_LIST':
@@ -484,9 +272,7 @@ class OpenvpnMgmtInterface(object):
                     routes_section = True
                 continue
 
-            if parts[0].startswith('TUN') or \
-               parts[0].startswith('TCP') or \
-               parts[0].startswith('Auth'):
+            if parts[0].startswith('TUN') or parts[0].startswith('TCP') or parts[0].startswith('Auth'):
                 parts = parts[0].split(',')
             if parts[0] == 'TUN/TAP read bytes':
                 client_session['tuntap_read'] = int(parts[1])
@@ -519,8 +305,7 @@ class OpenvpnMgmtInterface(object):
                     remote = remote_str
                     port = None
                 remote_ip = ip_address(remote)
-                if isinstance(remote_ip, IPv6Address) and \
-                        remote_ip.ipv4_mapped is not None:
+                if isinstance(remote_ip, IPv6Address) and remote_ip.ipv4_mapped is not None:
                     session['remote_ip'] = remote_ip.ipv4_mapped
                 else:
                     session['remote_ip'] = remote_ip
@@ -563,28 +348,28 @@ class OpenvpnMgmtInterface(object):
                     session['client_id'] = parts.popleft()
                     session['peer_id'] = parts.popleft()
                 sessions[str(session['username'])] = session
-#create dictionary for indexing
+                # create dictionary for indexing
                 if index_dict_buck2.has_key(common_name):
-                    update_database(sessions, num)
+                    mysql.mysql_update_query(sessions, num)
                 else:
-#query the SQL DB to fetch the port assigned
-                    print(session['username'])
-                    ssh_port = verify_if_port_exists(session['username'])
-                    iptables.installIpTableSouth(str(session['local_ip']),22,ssh_port)
-#query the deploy status of the ESC (TODO)
-                    status = get_deploy_status(session['username'])
-#get the siteID and esc Label number (TODO)
+                    # query the SQL DB to fetch the port assigned
+                    log.debug(session['username'])
+                    ssh_port = mysql.mysql_query_port_no(session['username'])
+                    iptables.installIpTableSouth(str(session['local_ip']), 22, ssh_port)
+                    # query the deploy status of the ESC (TODO)
+                    status = mysql.mysql_update_deploy_status(session['username'])
+                    # get the siteID and esc Label number (TODO)
                     if (status == 0):
-                        print("\n NOTIFY: ---> send email/sms notification <---- \n")
-			dlist = get_siteid_lableno(session['username'])
-                        notify_email(session['username'], dlist[0], str(dlist[1]))
-                        notify_sms(session['username'], dlist[0], str(dlist[1]))
-			update_comm("UP", 0, session['username'])
-			update_deploy_status(1, session['username'])
+                        log.info("\n NOTIFY: ---> send email/sms notification <---- \n")
+                        d_list = mysql.mysql_select_deploy_list(session['username'])
+                        sns.notify_email(session['username'], d_list[0], str(d_list[1]))
+                        sns.notify_sms(session['username'], d_list[0], str(d_list[1]))
+                        mysql.mysql_query_update_esc_tbl("UP", 0, session['username'])
+                        mysql.mysql_update_deploy_status(1, session['username'])
                     else:
-                        print("<------ No notification ----->\n")
+                        log.info("<------ No notification ----->\n")
                 index_dict_buck2[common_name] = num
-#increment counter
+                # increment counter
                 num = num + 1
 
             if routes_section:
@@ -592,7 +377,6 @@ class OpenvpnMgmtInterface(object):
                 last_seen = parts[5]
                 if local_ip in sessions:
                     sessions[local_ip]['last_seen'] = get_date(last_seen, uts=True)
-
 
         return sessions
 

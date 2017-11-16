@@ -1,75 +1,62 @@
 #!/usr/bin/env python
 
-import time
-import sys
 import argparse
-import fetch_data_openvpn_mgmt as Mgmt
-import config_loader as cfgInst
-import Queue
+import sys
 import threading
-import snmp_stat as snmpStat
-import rest_server as restSrv
+import time
 
-import mysql.connector
-from mysql.connector import MySQLConnection, Error
-interval=15
+import config_loader as cfg_instance
+import fetch_data_openvpn_mgmt as Mgmt
+import logmanager as log
+import mysql_queries as mysql
+import rest_server as server
+
+interval = 15
 
 
-def process_data():
+# Ping handler - ping each vpn client connection and
+# update the status in Mysql
+def ping_handler():
     while True:
-            Mgmt.query_with_fetchnone(True)
-            time.sleep(1)
+        mysql.mysql_query_select_esc_tbl_with_ping()
 
 
-def connect():
-    try:
-        conn = mysql.connector.connect(host='34.215.95.184', database='escdb', user='escmonit', password='passcode')
-        if conn.is_connected():
-            print('\t\t\t Connected to MySQL database')
-            return conn
-
-    except Error as e:
-        print(e)
-
-
+# Delete MySql data tables before start of the application
 def cleanup_db():
-    print("Preparing DELETE >>>")
-    conn = connect()
+    log.debug("Delete esc_tbl and esc_hbeat_tbl from escdb database")
+    conn = mysql.connect()
     cursor = conn.cursor()
     sql = "DELETE FROM esc_tbl;"
-    no_of_rows = cursor.execute(sql)
+    cursor.execute(sql)
     sql = "DELETE FROM esc_hbeat_tbl;"
-    no_of_rows = cursor.execute(sql)
+    cursor.execute(sql)
     conn.commit()
     conn.close()
     cursor.close()
 
 
 def main(**kwargs):
-    argLen = len(sys.argv)
-    print(argLen)
-    cfg = cfgInst.ConfigLoader(args.config)
+    arlen = len(sys.argv)
+    cfg = cfg_instance.ConfigLoader(args.config)
     cleanup_db()
     counter = 0
-    tName = "ping_worker"
-    threadID = 1
-    #start ping manager thread
-#create threads
-    t1 = threading.Thread(name='ping', target=process_data)
+
+    # connection thread : ping
+    t1 = threading.Thread(name='ping', target=ping_handler)
     t1.daemon = True
     t1.start()
-#second thread
-    t2 = threading.Thread(name='snmp_stat', target=snmpStat.snmp_stat_hdlr)
+
+    # rest server thread
+    t2 = threading.Thread(name='rest_server', target=server.rest_server_handler())
     t2.daemon = True
     t2.start()
-#rest server thread
-    t3 = threading.Thread(name='rest_server', target=restSrv.rest_server_hdlr)
-    t3.daemon = True
-    t3.start()
+
     while True:
-        print(" !!!!!!!!!!!!!!!!!!!!!!!!!! %d !!!!!!!!!!!!!!!!!!!!!!!!!!! " %(counter+1))
+        counter = counter + 1
+        print("=====o=====o=====o===== %d =====o=====o=====o===== " % counter)
         monitor = Mgmt.OpenvpnMgmtInterface(cfg, **kwargs)
         time.sleep(interval)
+
 
 # ----------------------------------------------------------------
 
@@ -83,6 +70,7 @@ def get_args():
                         required=False, default='./openvpn-monitor.conf',
                         help='Path to config file openvpn-monitor.conf')
     return parser.parse_args()
+
 
 # ----------------------------------------------------------------
 
