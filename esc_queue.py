@@ -5,13 +5,11 @@ import threading
 import time
 
 import logmanager
-import mysql_queries as mysql
 import snmp_stat as snmp
 import trap_v2c as snmp_trap
 
 log_m = logmanager.LogManager()
 log = log_m.logger()
-queueLock = threading.Lock()
 heart_beat_counter = 0
 count = 0
 heart_beat_dict = {'esc_sn01':0,'esc_sn015':0,'esc_sn023':0,'esc_sn026':0,'esc_sn029':0,'esc_sn08':0,'esc_sn014':0}
@@ -27,19 +25,8 @@ esc_sn014_Q = Queue.Queue(100)
 thread_list = []
 
 
-def insert_query_to_hbeat_tbl(esc_name, heart_beat, hb_count, opState, adminState, flag):
-    if flag == 1:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-        datecmd = time.strftime('%Y-%m-%d %H:%M:%S')
-        sql = "INSERT INTO esc_hbeat_tbl VALUES('%s', '%s', '%d', '%s', '%s', '%s')" % (
-            esc_name, heart_beat, hb_count, opState, adminState, datecmd)
-        cursor.execute(sql)
-        conn.commit()
-        conn.close()
-        cursor.close()
-
-
+# sensor id is different because it is coming from ESC, where as
+# other id is from openvpn
 def put_data_into_queue(username, data):
     if username == 'fed_esc_01':
         esc_sn01_Q.put(data)
@@ -115,7 +102,7 @@ def esc_sn029_handler(username):
 
 def esc_sn029__q_thread(username):
     log.debug("Created esc_sn029__q_thread")
-    thread_list.append(username)
+    thread_list[username] = ""
     while True:
         t = threading.Timer(15.0, esc_sn029_handler, args=(username,))
         log.debug("Starting esc_sn029__q_thread timer")

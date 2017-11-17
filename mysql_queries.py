@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import subprocess
+import time
 
 import mysql.connector
 from mysql.connector import Error
@@ -182,3 +183,17 @@ def mysql_get_deploy_status(esc_i_d):
     conn.close()
     cursor.close()
     return deploy_status
+
+
+# insert query into heart beat table
+def insert_query_to_hbeat_tbl(esc_name, heart_beat, hb_count, op_state, admin_state, flag):
+    if flag == 1:
+        conn = connect()
+        cursor = conn.cursor()
+        datecmd = time.strftime('%Y-%m-%d %H:%M:%S')
+        sql = "INSERT INTO esc_hbeat_tbl VALUES('%s', '%s', '%d', '%s', '%s', '%s')" % (
+            esc_name, heart_beat, hb_count, op_state, admin_state, datecmd)
+        cursor.execute(sql)
+        conn.commit()
+        conn.close()
+        cursor.close()
