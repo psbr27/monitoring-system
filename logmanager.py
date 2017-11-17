@@ -7,7 +7,8 @@ class LogManager(object):
     def __init__(self):
         self.log_level = "INFO"
         fileConfig('logging_config.ini')
+        #logging.basicConfig(level=logging.DEBUG, format='(%(threadName)-10s) %(message)s',)
 
-    @property
-    def logger(self):
+    @staticmethod
+    def logger():
         return logging.getLogger()

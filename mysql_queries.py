@@ -22,7 +22,6 @@ def connect():
     try:
         conn = mysql.connector.connect(host=HOST_IP, database='escdb', user='escmonit', password='passcode')
         if conn.is_connected():
-            log.debug('Connected to MySQL database')
             return conn
 
     except Error as e:
@@ -97,7 +96,7 @@ def mysql_query_port_no(esc_name):
     else:
         ssh_port = port_manager.getNextAvailablePort()
 
-    sql = "UPDATE ESC_DEPLOY_INFO SET ssh_port=%d WHERE escName='%s'" % (ssh_port, esc_name)
+    sql = "UPDATE ESC_DEPLOY_INFO SET sshPort=%d WHERE escName='%s'" % (ssh_port, esc_name)
     cursor.execute(sql)
     conn.commit()
 

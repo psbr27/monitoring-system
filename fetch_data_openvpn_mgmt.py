@@ -21,6 +21,7 @@ import GeoIP
 import sys
 import atexit
 import portmanagerlib
+import iptablelib
 from datetime import datetime
 from collections import deque
 from semantic_version import Version as semver
@@ -137,6 +138,7 @@ class OpenvpnMgmtInterface(object):
         len_dict = (len(index_dict_buck2))
         # if count is ZERO; then insert query into esc_tbl
         if count is -1:
+            log.debug("Insert data into esc_tbl")
             mysql.mysql_insert_query(vpn['sessions'], True)
 
         if count == len_dict:
@@ -148,8 +150,8 @@ class OpenvpnMgmtInterface(object):
             esc_m.cleanup_db()
             mysql.mysql_insert_query(vpn['sessions'], False)
 
-        log.debug("HB thread active are...")
-        log.debug(esc_q.thread_list)
+        log.info("HB thread active are...")
+        log.info(esc_q.thread_list)
 
     def _socket_send(self, command):
         if sys.version_info[0] == 2:
@@ -245,7 +247,7 @@ class OpenvpnMgmtInterface(object):
         stats['nclients'] = int(re.sub('nclients=', '', parts[0]))
         stats['bytesin'] = int(re.sub('bytesin=', '', parts[1]))
         stats['bytesout'] = int(re.sub('bytesout=', '', parts[2]).replace('\r\n', ''))
-        log.debug(stats)
+        log.info(stats)
         return stats
 
     @staticmethod
@@ -357,7 +359,7 @@ class OpenvpnMgmtInterface(object):
                     ssh_port = mysql.mysql_query_port_no(session['username'])
                     iptables.installIpTableSouth(str(session['local_ip']), 22, ssh_port)
                     # query the deploy status of the ESC (TODO)
-                    status = mysql.mysql_update_deploy_status(session['username'])
+                    status = mysql.mysql_get_deploy_status(session['username'])
                     # get the siteID and esc Label number (TODO)
                     if (status == 0):
                         log.info("\n NOTIFY: ---> send email/sms notification <---- \n")
