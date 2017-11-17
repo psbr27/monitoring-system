@@ -84,7 +84,6 @@ operational = "1.3.6.1.4.1.8072.2.7.1.1.1.1."
 
 
 def snmp_set_operations(escId, opState, siteId, entry, adminState):
-    log.info("--> SNMP Set operations table <--")
     set_d_b_int((operational + str(1) + "." + str(entry)), escId)
     set_d_b_str((operational + str(2) + "." + str(entry)), siteId)
     set_d_b_str((operational + str(3) + "." + str(entry)), opState)
@@ -197,6 +196,7 @@ def snmp_handler_response(new_sock, e):
                              hps['memoryFreeKb'], hps['memoryTotalKb'], hps['upTime'], hps['cpuClockSpeed'],
                              str(i2c['humidity']), str(i2c['temperature']), i2c['compass_x_axis'], i2c['compass_y_axis'],
                              i2c['compass_z_axis'], i2c['compassChange'])
+            index_counter = index_counter + 1
 
 
 def create_socket():

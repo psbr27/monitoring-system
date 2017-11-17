@@ -101,7 +101,7 @@ def esc_sn029_handler(username):
             log.warn("No heart beat detcted for esc_sn029, raise a trap")
             #insert_query_to_hbeat_tbl(username, "DOWN", count, "IN-ACTIVE", "DISABLE", 1)
             snmp.snmp_set_operations(29, "IN-ACTIVE", "ARLINGTON", 1, "DISABLE")
-            snmp_trap.trigger_trap("Operational Down")
+            snmp_trap.trigger_trap("No heartbeat detected")
             heart_beat_dict[username] = 0
         else:
             heart_beat_counter = heart_beat_counter + 1
@@ -133,7 +133,7 @@ def esc_sn026_handler(username):
             log.warn("No heart beat detcted for esc_sn026, raise a trap")
             #insert_query_to_hbeat_tbl(username, "DOWN", count, "IN-ACTIVE", "DISABLE", 1)
             snmp.snmp_set_operations(26, "IN-ACTIVE", "ARLINGTON", 1, "DISABLE")
-            snmp_trap.trigger_trap("Operational Down")
+            snmp_trap.trigger_trap("No heartbeat detected")
             heart_beat_dict[username] = 0
         else:
             heart_beat_counter = heart_beat_counter + 1
@@ -165,7 +165,7 @@ def esc_sn023_handler(username):
             log.warn("No heart beat detcted for esc_sn023, raise a trap")
             #insert_query_to_hbeat_tbl(username, "DOWN", count, "IN-ACTIVE", "DISABLE", 1)
             snmp.snmp_set_operations(23, "IN-ACTIVE", "ARLINGTON", 1, "DISABLE")
-            snmp_trap.trigger_trap("Operational Down")
+            snmp_trap.trigger_trap("No heartbeat detected")
             heart_beat_dict[username] = 0
         else:
             heart_beat_counter = heart_beat_counter + 1
@@ -198,7 +198,7 @@ def esc_sn015_handler(username):
             log.warn("No heart beat detcted for esc_sn015, raise a trap")
             #insert_query_to_hbeat_tbl(username, "DOWN", count, "IN-ACTIVE", "DISABLE", 1)
             snmp.snmp_set_operations(15, "IN-ACTIVE", "ARLINGTON", 1, "DISABLE")
-            snmp_trap.trigger_trap("Operational Down")
+            snmp_trap.trigger_trap("No heartbeat detected")
             heart_beat_dict[username] = 0
         else:
             heart_beat_counter = heart_beat_counter + 1
@@ -232,7 +232,7 @@ def esc_sn014_handler(username):
             log.warn("No heart beat detcted for esc_sn014, raise a trap")
             #insert_query_to_hbeat_tbl(username, "DOWN", count, "IN-ACTIVE", "DISABLE", 1)
             snmp.snmp_set_operations(14, "IN-ACTIVE", "ARLINGTON", 1, "DISABLE")
-            snmp_trap.trigger_trap("Operational Down")
+            snmp_trap.trigger_trap("No heartbeat detected")
             heart_beat_dict[username] = 0
         else:
             heart_beat_counter = heart_beat_counter + 1
@@ -267,7 +267,7 @@ def esc_sn08_handler(username):
             log.warn("No heart beat detcted for esc_sn08, raise a trap")
             #insert_query_to_hbeat_tbl(username, "DOWN", count, "IN-ACTIVE", "DISABLE", 1)
             snmp.snmp_set_operations(8, "IN-ACTIVE", "ARLINGTON", 1, "DISABLE")
-            snmp_trap.trigger_trap("Operational Down")
+            snmp_trap.trigger_trap("No heartbeat detected")
             heart_beat_dict[username] = 0
         else:
             heart_beat_counter = heart_beat_counter + 1
@@ -301,7 +301,7 @@ def esc_sn01_handler(username):
             log.warn("No heart beat detcted for esc_sn01, raise a trap")
             #insert_query_to_hbeat_tbl(username, "DOWN", count, "IN-ACTIVE", "DISABLE", 1)
             snmp.snmp_set_operations(1, "IN-ACTIVE", "ARLINGTON", 1, "DISABLE")
-            snmp_trap.trigger_trap("Operational Down")
+            snmp_trap.trigger_trap("No heartbeat detected")
             heart_beat_dict[username] = 0
         else:
             heart_beat_counter = heart_beat_counter + 1
